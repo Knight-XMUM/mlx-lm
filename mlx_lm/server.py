@@ -474,7 +474,10 @@ class ModelProvider:
         # Compute batchability
         is_batchable = draft_model is None
         is_batchable = is_batchable and all(
-            hasattr(c, "merge") for c in make_prompt_cache(model)
+            hasattr(c, "merge")
+            for c in make_prompt_cache(
+                model, max_kv_size=getattr(self.cli_args, "max_kv_size", None)
+            )
         )
 
         # Update the member variables
@@ -1090,7 +1093,10 @@ class ResponseGenerator:
             ctx.prompt_cache_count = len(prompt) - len(rest)
             rest = prompt[ctx.prompt_cache_count :]
             if cache is None:
-                cache = make_prompt_cache(self.model_provider.model)
+                cache = make_prompt_cache(
+                    self.model_provider.model,
+                    max_kv_size=getattr(self.cli_args, "max_kv_size", None),
+                )
                 if self.model_provider.draft_model is not None:
                     cache += make_prompt_cache(self.model_provider.draft_model)
 
@@ -1124,6 +1130,7 @@ class ResponseGenerator:
                 kv_bits=self.cli_args.kv_bits,
                 kv_group_size=self.cli_args.kv_group_size,
                 quantized_kv_start=self.cli_args.quantized_kv_start,
+                max_kv_size=getattr(self.cli_args, "max_kv_size", None),
             ):
                 text, finish_reason = _apply_stop_words(
                     stop_reader, gen.text, finish_reason=gen.finish_reason
@@ -2059,6 +2066,12 @@ def main():
         default=DEFAULT_QUANTIZED_KV_START,
         help="Token position to start KV cache quantization "
         f"(default: {DEFAULT_QUANTIZED_KV_START})",
+    )
+    parser.add_argument(
+        "--max-kv-size",
+        type=int,
+        default=None,
+        help="Set the maximum key-value cache size.",
     )
     parser.add_argument(
         "--pipeline",

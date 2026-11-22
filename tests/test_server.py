@@ -1006,5 +1006,23 @@ class TestGenerationThreadDeath(unittest.TestCase):
             rg._await_response(Queue())
 
 
+
+
+class TestMaxKVSizeServer(unittest.TestCase):
+    def test_batch_generator_receives_max_kv_size(self):
+        from mlx_lm.generate import BatchGenerator
+        from mlx_lm.models.cache import RotatingKVCache, make_prompt_cache
+
+        dummy_model = SimpleNamespace(layers=[object(), object()])
+        gen = BatchGenerator(dummy_model, max_kv_size=64)
+        self.assertEqual(gen.max_kv_size, 64)
+        caches = make_prompt_cache(dummy_model, max_kv_size=gen.max_kv_size)
+        self.assertEqual(len(caches), 2)
+        for c in caches:
+            self.assertIsInstance(c, RotatingKVCache)
+            self.assertEqual(c.max_size, 64)
+            self.assertTrue(hasattr(c, "merge"))
+
+
 if __name__ == "__main__":
     unittest.main()
